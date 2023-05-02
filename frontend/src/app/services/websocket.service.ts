@@ -72,15 +72,20 @@ export class WebsocketService {
 
         this.stateService.resetChainTip();
 
-        this.websocketSubject.complete();
-        this.subscription.unsubscribe();
-        this.websocketSubject = webSocket<WebsocketResponse>(
-          this.webSocketUrl.replace('{network}', this.network ? '/' + this.network : '')
-        );
-
-        this.startSubscription();
+        this.reconnectWebsocket();
       });
     }
+  }
+
+  reconnectWebsocket(retrying = false, hasInitData = false) {
+    console.log('reconnecting websocket');
+    this.websocketSubject.complete();
+    this.subscription.unsubscribe();
+    this.websocketSubject = webSocket<WebsocketResponse>(
+      this.webSocketUrl.replace('{network}', this.network ? '/' + this.network : '')
+    );
+
+    this.startSubscription(retrying, hasInitData);
   }
 
   startSubscription(retrying = false, hasInitData = false) {
@@ -200,7 +205,7 @@ export class WebsocketService {
     this.goneOffline = true;
     this.stateService.connectionState$.next(0);
     window.setTimeout(() => {
-      this.startSubscription(true);
+      this.reconnectWebsocket(true);
     }, OFFLINE_RETRY_AFTER_MS);
   }
 
