@@ -9,6 +9,7 @@ import loadingIndicators from './loading-indicators';
 import bitcoinClient from './bitcoin/bitcoin-client';
 import bitcoinSecondClient from './bitcoin/bitcoin-second-client';
 import rbfCache from './rbf-cache';
+import redisCache from './redis-cache';
 
 class Mempool {
   private inSync: boolean = false;
@@ -84,6 +85,10 @@ class Mempool {
     }
     if (this.$asyncMempoolChangedCallback) {
       await this.$asyncMempoolChangedCallback(this.mempoolCache, [], []);
+    }
+    if (config.MEMPOOL.CACHE_ENABLED && config.REDIS.ENABLED) {
+      logger.debug('copying mempool from disk cache into Redis');
+      await redisCache.$addTransactions(Object.values(mempoolData));
     }
   }
 
@@ -236,6 +241,12 @@ class Mempool {
       this.updateTimerProgress(timer, 'running async mempool callback');
       await this.$asyncMempoolChangedCallback(this.mempoolCache, newTransactions, deletedTransactions);
       this.updateTimerProgress(timer, 'completed async mempool callback');
+    }
+
+    // Update Redis cache
+    if (config.REDIS.ENABLED) {
+      await redisCache.$addTransactions(newTransactions);
+      await redisCache.$removeTransactions(deletedTransactions.map(tx => tx.txid));
     }
 
     const end = new Date().getTime();
