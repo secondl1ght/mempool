@@ -144,7 +144,10 @@ class WebsocketHandler {
               if (tx && tx.position) {
                 response['txPosition'] = {
                   txid: trackTxid,
-                  position: tx.position,
+                  position: {
+                    ...tx.position,
+                    accelerated: tx.acceleration || undefined,
+                  }
                 };
               }
             } else {
@@ -503,7 +506,10 @@ class WebsocketHandler {
         if (mempoolTx && mempoolTx.position) {
           response['txPosition'] = JSON.stringify({
             txid: trackTxid,
-            position: mempoolTx.position,
+            position: {
+              ...mempoolTx.position,
+              accelerated: mempoolTx.acceleration || undefined,
+            }
           });
         }
       }
@@ -671,7 +677,10 @@ class WebsocketHandler {
           if (mempoolTx && mempoolTx.position) {
             response['txPosition'] = JSON.stringify({
               txid: trackTxid,
-              position: mempoolTx.position,
+              position: {
+                ...mempoolTx.position,
+                accelerated: mempoolTx.acceleration || undefined,
+              }
             });
           }
         }
