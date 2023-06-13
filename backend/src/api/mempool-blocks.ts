@@ -1,5 +1,5 @@
 import logger from '../logger';
-import { MempoolBlock, MempoolTransactionExtended, TransactionStripped, MempoolBlockWithTransactions, MempoolBlockDelta, Ancestor, CompactThreadTransaction, EffectiveFeeStats } from '../mempool.interfaces';
+import { MempoolBlock, MempoolTransactionExtended, TransactionStripped, MempoolBlockWithTransactions, MempoolBlockDelta, Ancestor, CompactThreadTransaction, EffectiveFeeStats, PoolTag } from '../mempool.interfaces';
 import { Common, OnlineFeeStatsCalculator } from './common';
 import config from '../config';
 import { Worker } from 'worker_threads';
@@ -206,7 +206,7 @@ class MempoolBlocks {
     return mempoolBlockDeltas;
   }
 
-  public async $makeBlockTemplates(newMempool: { [txid: string]: MempoolTransactionExtended }, saveResults: boolean = false, useAccelerations: boolean = false): Promise<MempoolBlockWithTransactions[]> {
+  public async $makeBlockTemplates(newMempool: { [txid: string]: MempoolTransactionExtended }, saveResults: boolean = false, useAccelerations: boolean = false, accelerationPool?: number): Promise<MempoolBlockWithTransactions[]> {
     const start = Date.now();
 
     // reset mempool short ids
@@ -224,7 +224,7 @@ class MempoolBlocks {
       if (entry.uid != null) {
         strippedMempool.set(entry.uid, {
           uid: entry.uid,
-          fee: entry.fee + (useAccelerations ? (accelerations[entry.txid] || 0) : 0),
+          fee: entry.fee + (useAccelerations && (!accelerationPool || accelerations[entry.txid]?.pools?.includes(accelerationPool)) ? (accelerations[entry.txid]?.feeDelta || 0) : 0),
           weight: (entry.adjustedVsize * 4),
           sigops: entry.sigops,
           feePerVsize: entry.adjustedFeePerVsize || entry.feePerVsize,
@@ -294,7 +294,7 @@ class MempoolBlocks {
     const addedStripped: CompactThreadTransaction[] = addedAndChanged.filter(entry => entry.uid != null).map(entry => {
       return {
         uid: entry.uid || 0,
-        fee: entry.fee + (useAccelerations ? (accelerations[entry.txid] || 0) : 0),
+        fee: entry.fee + (useAccelerations ? (accelerations[entry.txid]?.feeDelta || 0) : 0),
         weight: (entry.adjustedVsize * 4),
         sigops: entry.sigops,
         feePerVsize: entry.adjustedFeePerVsize || entry.feePerVsize,
